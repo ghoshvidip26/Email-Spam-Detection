@@ -1,11 +1,20 @@
 {
   "manifest_version": 3,
-  "name": "URL Phishing Checker",
+  "name": "AI Scam Guard",
   "version": "1.0",
-  "permissions": ["activeTab"],
+  "description": "AI-powered agent to detect phishing and scams in our emails.",
+  "permissions": ["activeTab", "storage", "scripting"],
+  "host_permissions": ["https://mail.google.com/*", "http://localhost:8000/*"],
   "background": {
     "service_worker": "background.js"
   },
+  "content_scripts": [
+    {
+      "matches": ["https://mail.google.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": "icon.png"

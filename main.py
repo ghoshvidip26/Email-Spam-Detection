@@ -2,15 +2,12 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import os 
-from google import genai
 from fastapi.middleware.cors import CORSMiddleware
-from google.genai import types
+from langchain_ollama import ChatOllama
+
 
 load_dotenv()
-
-client = genai.Client(api_key=os.getenv('GOOGLE_API_KEY'))
 app = FastAPI()
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=['*'],
@@ -19,20 +16,41 @@ app.add_middleware(
     allow_headers=['*']
 )
 
-class URLCheckRequest(BaseModel): 
-    url: str 
+class emailCheckRequest(BaseModel): 
+    emailBody: str 
+    
+llm = ChatOllama(
+    model="llama3",
+    temperature=0
+)
 
-@app.post('/checkURL')
-async def checkURL(request: URLCheckRequest): 
-    prompt = f"Check if the following URL is a phishing site. Answer in Yes or No only. URL: {request.url}"
-    
-    response = client.models.generate_content(
-        model="gemini-3-flash-preview",
-        contents=prompt,  # Direct string or list of strings/parts
-        config=types.GenerateContentConfig(
-            system_instruction="You are a cybersecurity analyst whose expertise lies in analyzing website URLs to detect phishing sites."
-        )
-    )
+@app.post("/checkURL")
+async def checkURL(req: emailCheckRequest):
+
+    prompt = f"""
+You are analyzing an email for safety signals.
+
+Detect ONLY:
+1. Urgency or pressure
+2. Threats
+3. Requests for sensitive data
+
+Return valid JSON only:
+
+{{
+  "urgency": true | false,
+  "threat": true | false,
+  "sensitive_request": true | false,
+  "explanation": "short reason"
+}}
+
+Email:
+{req.emailBody}
+"""
+
+    response = llm.invoke(prompt)
     print(response)
-    
-    return {"result": response.text}
+
+    return {
+        "signals": response.content
+    }
