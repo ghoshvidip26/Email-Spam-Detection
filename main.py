@@ -26,7 +26,7 @@ llm = ChatOllama(
 
 @app.post("/checkURL")
 async def checkURL(req: emailCheckRequest):
-
+    print("Request: ",req)
     prompt = f"""
 You are analyzing an email for safety signals.
 
@@ -49,7 +49,7 @@ Email:
 """
 
     response = llm.invoke(prompt)
-    print(response)
+    print(response.content)
 
     return {
         "signals": response.content

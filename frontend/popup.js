@@ -1,3 +1,5 @@
+console.log("SignalMail popup.js active");
+
 document.getElementById("checkButton").addEventListener("click", async () => {
   const resultDiv = document.getElementById("result");
   resultDiv.textContent = "Fetching last scan...";
@@ -5,7 +7,7 @@ document.getElementById("checkButton").addEventListener("click", async () => {
   console.log("Result Div: ", resultDiv);
   try {
     const response = await chrome.runtime.sendMessage({
-      type: "SCAN",
+      type: "GET_LAST_SCAN",
     });
     console.log("Response: ", response);
     if (!response) {
@@ -21,24 +23,33 @@ document.getElementById("checkButton").addEventListener("click", async () => {
       resultDiv.textContent = response;
       return;
     }
+    console.log("Signals: ", signals);
+    const badge = (flag, label) => `
+  <div style="
+    margin: 6px 0;
+    padding: 8px;
+    border-radius: 6px;
+    background: ${flag ? "#ffebee" : "#e8f5e9"};
+    color: ${flag ? "#c62828" : "#2e7d32"};
+    font-weight: 600;
+  ">
+    ${flag ? "⚠️" : "✅"} ${label}
+  </div>
+`;
 
     resultDiv.innerHTML = `
-      <div style="color:${
-        signals.threat || signals.sensitive_request ? "#ff4d4d" : "#2ecc71"
-      }; font-weight:bold;">
-        Risk Level: ${
-          signals.threat || signals.sensitive_request ? "High" : "Low"
-        }
-      </div>
-      <div style="margin-top:6px; font-size:12px;">
-        <strong>Urgency:</strong> ${signals.urgency ? "Yes" : "No"}<br>
-        <strong>Threat:</strong> ${signals.threat ? "Yes" : "No"}<br>
-        <strong>Sensitive Request:</strong> ${
-          signals.sensitive_request ? "Yes" : "No"
-        }<br>
-        <strong>Why:</strong> ${signals.explanation}
-      </div>
-    `;
+  <div style="font-weight:bold; margin-bottom:8px;">
+    Email Safety Signals
+  </div>
+
+  ${badge(signals.urgency, "Urgency / Pressure")}
+  ${badge(signals.threat, "Threats")}
+  ${badge(signals.sensitive_request, "Sensitive Data Request")}
+
+  <div style="margin-top:10px; font-size:12px; color:#555;">
+    ${signals.explanation}
+  </div>
+`;
   } catch (e) {
     console.error(e);
     resultDiv.textContent = "Could not retrieve scan result.";

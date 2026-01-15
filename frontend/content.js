@@ -1,54 +1,37 @@
-function getEmailBody() {
-  const main = document.querySelector('div[role="main"]');
-  if (!main) {
-    return null;
-  }
+let debounceTimer = null;
+let lastText = "";
 
-  const candidates = [...main.querySelectorAll("div")].filter(
-    (el) => el.innerText && el.innerText.length > 200
-  );
-  candidates.sort((a, b) => b.innerText.length - a.innerText.length);
-  return candidates[0]?.innerText || null;
+function extractEmailBody() {
+  const container = document.querySelector("div[role='main']");
+  if (!container) return null;
+
+  const text = container.innerText.trim();
+  if (!text || text.length < 200) return null;
+
+  return text;
 }
 
-let lastScan = "";
+function triggerScan() {
+  const body = extractEmailBody();
+  if (!body) return;
 
-function extractEmail() {
-  const body = getEmailBody();
-  const sender = document.querySelector("span[email]")?.getAttribute("email");
-  if (!body || !sender) {
-    return null;
-  }
+  if (body === lastText) return;
+  lastText = body;
 
-  const id = sender + body.slice(0, 50);
-  if (id === lastScan) {
-    return null;
-  }
-  lastScan = id;
-  return { sender, body };
-}
+  console.log("Sending email for scan, length:", body.length);
 
-let observer = null;
-
-function startObserver() {
-  if (observer) observer.disconnect();
-
-  observer = new MutationObserver(() => {
-    try {
-      const data = extractEmail();
-      if (data) {
-        chrome.runtime.sendMessage({
-          type: "SCAN",
-          payload: data,
-        });
-      }
-    } catch (e) {
-      console.warn("Extension context invalidated, stopping observer");
-      observer.disconnect();
-    }
+  chrome.runtime.sendMessage({
+    type: "SCAN_EMAIL",
+    payload: { body },
   });
-
-  observer.observe(document.body, { subtree: true, childList: true });
 }
 
-startObserver();
+const observer = new MutationObserver(() => {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(triggerScan, 800);
+});
+
+observer.observe(document.body, {
+  childList: true,
+  subtree: true,
+});
